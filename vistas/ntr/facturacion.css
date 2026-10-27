@@ -7,11 +7,25 @@
 
 .indicador-mensual {
     min-width: 0;
-    padding: 18px;
-    border-left: 4px solid var(--coral-vibrante);
-    border-radius: 8px;
+    padding: 20px;
+    border-top: 4px solid var(--coral-vibrante);
+    border-radius: 12px;
     background: var(--gris-claro);
+    box-shadow: 0 2px 8px rgba(18, 30, 108, 0.06);
 }
+
+.indicador-costo { border-top-color: var(--azul-bold); }
+.indicador-gasto { border-top-color: var(--coral-vibrante); }
+.indicador-total {
+    border-top-color: transparent;
+    background: linear-gradient(135deg, var(--azul-bold) 0%, #2A3BA8 100%);
+}
+.indicador-mensual.indicador-total h3, .indicador-mensual.indicador-total .valor-mensual, .indicador-mensual.indicador-total .variacion-mensual { color: var(--blanco); }
+
+.variacion-mensual { margin-top: 8px; color: var(--gris-texto); font-size: 0.8rem; font-weight: 600; }
+.variacion-sube { color: var(--coral-vibrante); }
+.variacion-baja { color: #2E7D4F; }
+.indicador-mensual.indicador-total .variacion-sube, .indicador-mensual.indicador-total .variacion-baja { color: #FFD9DC; }
 
 .indicador-mensual h3 {
     margin-bottom: 8px;
@@ -21,10 +35,10 @@
 }
 
 .valor-mensual {
-    overflow-wrap: anywhere;
     color: var(--azul-bold);
-    font-size: clamp(1.35rem, 3vw, 2rem);
+    font-size: clamp(1.1rem, 2vw, 1.6rem);
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .nota-ntr {
@@ -118,7 +132,15 @@
 .tabla-facturacion-contenedor { overflow-x: auto; }
 .tabla-facturacion { width: 100%; border-collapse: collapse; text-align: left; }
 .tabla-facturacion th, .tabla-facturacion td { padding: 12px; border-bottom: 1px solid #E0E0E0; }
-.tabla-facturacion th { background: var(--gris-claro); }
+.tabla-facturacion th { position: sticky; top: 0; background: var(--gris-claro); }
+.tabla-facturacion tbody tr:hover { background: #FAFAFC; }
+.celda-valor { font-variant-numeric: tabular-nums; text-align: right; }
+.tabla-facturacion th:nth-child(3) { text-align: right; }
+.chip-tipo { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+.chip-costo { background: #E3E6F8; color: var(--azul-bold); }
+.chip-gasto { background: #FDE4E6; color: #B3202C; }
+.chip-adquirencia { background: #E4F1E8; color: #2E7D4F; }
+.chip-sin-clasificar { background: #ECECEC; color: var(--gris-texto); }
 .total-facturacion { margin: 14px 0 6px; font-weight: 700; }
 .estado-facturacion { margin-top: 12px; color: var(--gris-texto); font-size: 0.9rem; }
 

@@ -19,6 +19,13 @@
       "firebase-debug.log",
       "**/firebase-debug.log",
       "apps-script/**"
+    ],
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "/login.html",
+        "type": 302
+      }
     ]
   }
 }

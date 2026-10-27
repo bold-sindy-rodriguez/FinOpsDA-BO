@@ -22,7 +22,7 @@ const monthFormatter = new Intl.DateTimeFormat("es-CO", {
 });
 
 const chartColors = ["#121E6C", "#EE424E", "#5C8D6D", "#8A5CC2", "#D18B25", "#4B91B8"];
-const knownTypes = ["Costo", "Gasto", "Sin clasificar"];
+const knownTypes = ["Costo", "Gasto", "Adquirencia", "Sin clasificar"];
 const svgNamespace = "http://www.w3.org/2000/svg";
 
 export function escucharFacturacion(db, elements) {
@@ -52,17 +52,18 @@ export function escucharFacturacion(db, elements) {
             return;
         }
 
-        if (!initializedPeriod) {
-            elements.startRange.value = "0";
-            elements.endRange.value = String(availableMonths.length - 1);
-            initializedPeriod = true;
-        }
-
+        // El máximo se actualiza antes de asignar el valor: si no, el navegador recorta el rango al máximo anterior.
         const lastIndex = availableMonths.length - 1;
         elements.startRange.min = "0";
         elements.startRange.max = String(lastIndex);
         elements.endRange.min = "0";
         elements.endRange.max = String(lastIndex);
+
+        if (!initializedPeriod) {
+            elements.startRange.value = "0";
+            elements.endRange.value = String(lastIndex);
+            initializedPeriod = true;
+        }
 
         let startIndex = clampIndex(elements.startRange.value, lastIndex);
         let endIndex = clampIndex(elements.endRange.value, lastIndex);
@@ -91,6 +92,8 @@ export function escucharFacturacion(db, elements) {
         const rowsByKey = new Map();
         const currentMonthKey = getMonthKey(currentMonthDate());
         const currentTotals = new Map();
+        const previousTotals = new Map();
+        const previousMonthKey = getMonthKey(previousMonthDate());
         let currentRecordCount = 0;
 
         records.forEach((record) => {
@@ -102,6 +105,9 @@ export function escucharFacturacion(db, elements) {
 
             const type = getType(record.Tipo_Registro);
             const channel = textValue(record.Canal) || "Sin canal";
+            if (month.key === previousMonthKey) {
+                previousTotals.set(type, (previousTotals.get(type) || 0) + amount);
+            }
             if (month.key === currentMonthKey) {
                 currentRecordCount++;
                 currentTotals.set(type, (currentTotals.get(type) || 0) + amount);
@@ -146,6 +152,12 @@ export function escucharFacturacion(db, elements) {
         elements.costTotal.textContent = currencyFormatter.format(costTotal);
         elements.expenseTotal.textContent = currencyFormatter.format(expenseTotal);
         elements.currentTotal.textContent = currencyFormatter.format(currentTotal);
+        const previousCost = previousTotals.get("Costo") || 0;
+        const previousExpense = previousTotals.get("Gasto") || 0;
+        const previousTotal = [...previousTotals.values()].reduce((sum, amount) => sum + amount, 0);
+        renderDelta(elements.costDelta, costTotal, previousCost);
+        renderDelta(elements.expenseDelta, expenseTotal, previousExpense);
+        renderDelta(elements.totalDelta, currentTotal, previousTotal);
         elements.currentMonth.textContent = currentRecordCount === 0
             ? `Sin registros de facturación para ${monthFormatter.format(currentMonthDate())}. El NTR requiere ingresos y cantidad de transacciones.`
             : `Resumen de ${monthFormatter.format(currentMonthDate())}. El NTR requiere ingresos y cantidad de transacciones.`;
@@ -239,6 +251,9 @@ export function escucharFacturacion(db, elements) {
         elements.costTotal.textContent = "No disponible";
         elements.expenseTotal.textContent = "No disponible";
         elements.currentTotal.textContent = "No disponible";
+        [elements.costDelta, elements.expenseDelta, elements.totalDelta].forEach((element) => {
+            if (element) element.textContent = "";
+        });
         elements.tableBody.replaceChildren();
         renderLineChart(elements.typeChart, [], [], "No se pudieron cargar los datos.");
         renderLineChart(elements.channelChart, [], [], "No se pudieron cargar los datos.");
@@ -259,13 +274,40 @@ function renderTable(tableBody, rows) {
 
     rows.forEach(({ month, channel, type, amount }) => {
         const row = document.createElement("tr");
-        [month.label, channel, currencyFormatter.format(amount), type].forEach((value) => {
+        [month.label, channel, currencyFormatter.format(amount)].forEach((value, index) => {
             const cell = document.createElement("td");
             cell.textContent = value;
+            if (index === 2) cell.className = "celda-valor";
             row.append(cell);
         });
+        const typeCell = document.createElement("td");
+        const chip = document.createElement("span");
+        chip.className = `chip-tipo chip-${{ Costo: "costo", Gasto: "gasto", Adquirencia: "adquirencia" }[type] || "sin-clasificar"}`;
+        chip.textContent = type;
+        typeCell.append(chip);
+        row.append(typeCell);
         tableBody.append(row);
     });
+}
+
+// Variación porcentual contra el mes anterior; en costos y gastos subir es negativo.
+function renderDelta(element, current, previous) {
+    if (!element) {
+        return;
+    }
+    element.className = "variacion-mensual";
+    if (!previous) {
+        element.textContent = "Sin referencia del mes anterior";
+        return;
+    }
+    const change = ((current - previous) / Math.abs(previous)) * 100;
+    const formatted = Math.abs(change).toLocaleString("es-CO", { maximumFractionDigits: 1 });
+    if (Math.abs(change) < 0.05) {
+        element.textContent = "Sin cambios vs mes anterior";
+        return;
+    }
+    element.classList.add(change > 0 ? "variacion-sube" : "variacion-baja");
+    element.textContent = `${change > 0 ? "▲" : "▼"} ${formatted} % vs mes anterior`;
 }
 
 function renderLineChart(container, months, datasets, emptyMessage) {
@@ -294,6 +336,8 @@ function renderLineChart(container, months, datasets, emptyMessage) {
         role: "img",
         "aria-label": `Gráfico lineal con ${datasets.map((dataset) => dataset.name).join(", ")}`
     });
+    // Con muchos meses el gráfico se desplaza en horizontal en vez de comprimir las etiquetas.
+    svg.style.minWidth = `${Math.max(640, months.length * 56)}px`;
 
     for (let tick = 0; tick <= 4; tick++) {
         const value = (yMax / 4) * tick;
@@ -360,6 +404,7 @@ function renderLineChart(container, months, datasets, emptyMessage) {
     });
 
     container.append(svg, legend);
+    container.scrollLeft = container.scrollWidth; // abre mostrando los meses más recientes
 }
 
 function createSvgElement(tag, attributes = {}) {
@@ -434,6 +479,11 @@ function currentMonthDate() {
     return new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
 }
 
+function previousMonthDate() {
+    const now = new Date();
+    return new Date(Date.UTC(now.getFullYear(), now.getMonth() - 1, 1));
+}
+
 function clampIndex(value, lastIndex) {
     const index = Number.parseInt(value, 10);
     return Number.isInteger(index) ? Math.min(Math.max(index, 0), lastIndex) : 0;
@@ -454,6 +504,10 @@ function getType(value) {
     }
     if (type.includes("gasto")) {
         return "Gasto";
+    }
+    // La hoja escribe "Adquierencia"; se acepta también la grafía correcta.
+    if (type.includes("adquie") || type.includes("adquir")) {
+        return "Adquirencia";
     }
     return "Sin clasificar";
 }
