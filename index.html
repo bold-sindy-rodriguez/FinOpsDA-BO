@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FinOpsDA-BO | Bold</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vistas/ntr/facturacion.css">
     
     <style>
         :root {
@@ -24,8 +25,10 @@
             color: var(--azul-bold);
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            height: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         /* BARRA SUPERIOR */
@@ -44,7 +47,7 @@
         .titulo-principal { font-size: 1.5rem; font-weight: 700; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 20px; }
 
         /* CONTENEDOR PRINCIPAL */
-        .contenedor-dashboard { display: flex; flex: 1; overflow: hidden; }
+        .contenedor-dashboard { display: flex; flex: 1; min-height: 0; overflow: visible; }
 
         /* MENÚ LATERAL */
         .menu-lateral {
@@ -68,10 +71,10 @@
         }
 
         /* ÁREA DE CONTENIDO DERECHA */
-        .area-contenido { flex: 1; padding: 30px; display: flex; flex-direction: column; }
+        .area-contenido { flex: 1; min-width: 0; padding: 30px; display: flex; flex-direction: column; }
         .tarjeta-contenido {
             background-color: var(--blanco); border-radius: 12px; padding: 40px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03); height: 100%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); height: auto; min-height: 100%;
         }
         .tarjeta-contenido h2 { font-size: 1.8rem; color: var(--azul-bold); margin-bottom: 15px; }
         .tarjeta-contenido p { color: var(--gris-texto); line-height: 1.6; }
@@ -79,7 +82,7 @@
         /* VISTAS */
         .vista { display: none; /* Oculta todas las vistas por defecto */ }
         .vista-activa { display: block; }
-        .vista-iframe { width: 100%; height: 100%; border: none; border-radius: 12px; }
+        .vista-iframe { width: 100%; height: calc(100vh - 130px); min-height: 600px; border: none; border-radius: 12px; }
 
         /* DISEÑO ESPECIAL PARA EL DATO NTR */
         .caja-indicador {
@@ -88,21 +91,40 @@
         }
         .valor-ntr { font-size: 4rem; font-weight: 800; color: var(--azul-bold); }
         .estado-carga { color: var(--coral-vibrante); font-style: italic; }
+        .resumen-facturacion { margin-top: 28px; }
+        .filtros-facturacion { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+        .filtros-facturacion label { display: grid; gap: 6px; color: var(--gris-texto); font-size: 0.9rem; }
+        .filtros-facturacion select {
+            min-width: 170px; padding: 9px 12px; border: 1px solid var(--borde);
+            border-radius: 6px; background: var(--blanco); color: var(--azul-bold); font: inherit;
+        }
+        #contenido-app:not([hidden]) { display: flex; flex-direction: column; min-height: 100vh; }
+        #comprobando-acceso { margin: auto; padding: 24px; color: var(--azul-bold); }
+        .boton-sesion {
+            padding: 10px 16px; border: 0; border-radius: 6px; background: var(--azul-bold);
+            color: var(--blanco); font: inherit; font-weight: 600; cursor: pointer;
+        }
+        .boton-sesion:hover { background: var(--coral-vibrante); }
+        .usuario-sesion { margin-left: auto; padding-right: 16px; color: var(--blanco); font-size: 0.9rem; }
 
     </style>
 </head>
 <body>
+    <p id="comprobando-acceso" role="status">Verificando tu sesión...</p>
+    <div id="contenido-app" hidden>
 
     <header class="barra-superior">
         <img src="LOGO-BOLD-BLANCO.png" alt="Logo Bold" class="logo">
         <h1 class="titulo-principal">FinOps Desk</h1>
+        <span id="usuario-sesion" class="usuario-sesion"></span>
+        <button id="cerrar-sesion" class="boton-sesion" type="button">Cerrar sesión</button>
     </header>
 
     <div class="contenedor-dashboard">
         <aside class="menu-lateral">
             <ul class="lista-menu">
                 <li><a onclick="cambiarVista('automatizaciones')">Automatizaciones</a></li>
-                <li><a onclick="cambiarVista('ntr')">NTR</a></li>
+                <li><a onclick="cambiarVista('ntr')">Facturación / NTR</a></li>
                 <li><a onclick="cambiarVista('mantenimiento')">ARPAC</a></li>
                 <li><a onclick="cambiarVista('mantenimiento')">CPC</a></li>
                 <li><a onclick="cambiarVista('mantenimiento')">Modelo liquidación de ingresos</a></li>
@@ -118,13 +140,69 @@
             <iframe id="vista-automatizaciones" class="vista vista-iframe" src="https://aldemarjerez-crypto.github.io/Finops-Tooldeck/index.html"></iframe>
 
             <div id="vista-ntr" class="tarjeta-contenido vista">
-                <h2>Indicador NTR (Net Take Rate)</h2>
-                <p>Este dato se calcula mensualmente y se extrae automáticamente en tiempo real desde la nube.</p>
-                
-                <div class="caja-indicador">
-                    <p>Resultado del mes actual:</p>
-                    <div id="valor-ntr-pantalla" class="valor-ntr estado-carga">Cargando datos...</div>
-                </div>
+                <h2>Facturación mensual</h2>
+                <p>Costos y gastos consolidados de la base de datos.</p>
+                <section class="resumen-mensual" aria-label="Resumen de facturación del mes actual">
+                    <article class="indicador-mensual">
+                        <h3>Costos del mes actual</h3>
+                        <p id="costo-mes-actual" class="valor-mensual">Cargando...</p>
+                    </article>
+                    <article class="indicador-mensual">
+                        <h3>Gastos del mes actual</h3>
+                        <p id="gasto-mes-actual" class="valor-mensual">Cargando...</p>
+                    </article>
+                    <article class="indicador-mensual">
+                        <h3>Total facturado del mes actual</h3>
+                        <p id="total-mes-actual" class="valor-mensual">Cargando...</p>
+                    </article>
+                </section>
+                <p id="estado-mes-actual" class="nota-ntr" role="status">
+                    El cálculo del NTR queda pendiente hasta incorporar ingresos y cantidad de transacciones.
+                </p>
+                <section class="resumen-facturacion" aria-labelledby="titulo-facturacion">
+                    <h3 id="titulo-facturacion">Facturación consolidada</h3>
+                    <p>Explora los valores mensuales por tipo y canal. Usa los controles para ajustar el periodo.</p>
+                    <div class="controles-periodo" aria-label="Seleccionar periodo del informe">
+                        <label class="control-periodo" for="periodo-desde">
+                            Desde: <strong id="periodo-desde-etiqueta">-</strong>
+                            <input id="periodo-desde" type="range" min="0" max="0" value="0" aria-label="Mes inicial del periodo">
+                        </label>
+                        <label class="control-periodo" for="periodo-hasta">
+                            Hasta: <strong id="periodo-hasta-etiqueta">-</strong>
+                            <input id="periodo-hasta" type="range" min="0" max="0" value="0" aria-label="Mes final del periodo">
+                        </label>
+                    </div>
+                    <div class="filtros-facturacion">
+                        <label>Tipo
+                            <select id="filtro-tipo-facturacion">
+                                <option value="">Todos los tipos</option>
+                                <option value="Costo">Costo</option>
+                                <option value="Gasto">Gasto</option>
+                                <option value="Sin clasificar">Sin clasificar</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="graficos-facturacion">
+                        <section class="grafico-facturacion" aria-labelledby="titulo-grafico-tipo">
+                            <h3 id="titulo-grafico-tipo">Evolución mensual por tipo</h3>
+                            <div id="grafico-tipo" class="grafico-desplazable" aria-live="polite"></div>
+                        </section>
+                        <section class="grafico-facturacion" aria-labelledby="titulo-grafico-canal">
+                            <h3 id="titulo-grafico-canal">Evolución mensual por canal</h3>
+                            <div id="grafico-canal" class="grafico-desplazable" aria-live="polite"></div>
+                        </section>
+                    </div>
+                    <p class="total-facturacion">Total mostrado: <span id="total-facturacion">Cargando...</span></p>
+                    <div class="tabla-facturacion-contenedor">
+                        <table class="tabla-facturacion">
+                            <thead><tr><th>Mes</th><th>Canal</th><th>Valor</th><th>Tipo</th></tr></thead>
+                            <tbody id="filas-facturacion">
+                                <tr><td colspan="4">Cargando información...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p id="estado-facturacion" class="estado-facturacion" role="status">Conectando con Firestore...</p>
+                </section>
             </div>
 
             <div id="vista-mantenimiento" class="tarjeta-contenido vista">
@@ -133,46 +211,85 @@
             </div>
         </main>
     </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { escucharFacturacion } from "./vistas/ntr/facturacion.js";
+        import { mensajeErrorAcceso, onAuthStateChanged, signOut, usuarioAutorizado } from "./vistas/ntr/acceso.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBpvG5So-iq2cEGKq10Z-vJaKEiwi4ApwY",
-            authDomain: "ntr-backend.firebaseapp.com",
-            projectId: "ntr-backend",
-            storageBucket: "ntr-backend.firebasestorage.app",
-            messagingSenderId: "888116841336",
-            appId: "1:888116841336:web:712d1e2d4dcee2213e568d",
-            measurementId: "G-K3H9917H5W"
+            apiKey: "AIzaSyBse--Da5Fdrso5bp9rFsUbq_uLcn61HS0",
+            authDomain: "black-hulling-462522-j2.firebaseapp.com",
+            projectId: "black-hulling-462522-j2",
+            storageBucket: "black-hulling-462522-j2.firebasestorage.app",
+            messagingSenderId: "625642864594",
+            appId: "1:625642864594:web:36faeadc111c1fd972d20b",
+            measurementId: "G-ZKXD0N4QCV"
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = getFirestore(app, "ntr-boldcf");
+        const auth = getAuth(app);
+        const loadingMessage = document.getElementById("comprobando-acceso");
+        const application = document.getElementById("contenido-app");
+        let dashboardStarted = false;
 
-        window.cambiarVista = async function(nombreVista) {
-            document.querySelectorAll('.vista').forEach(el => el.classList.remove('vista-activa'));
-            document.getElementById('vista-' + nombreVista).classList.add('vista-activa');
-
-            if (nombreVista === 'ntr') {
-                try {
-                    const referenciaDocumento = doc(db, "indicadores", "ntr_mensual");
-                    const resultado = await getDoc(referenciaDocumento);
-
-                    if (resultado.exists()) {
-                        let numeroNTR = resultado.data().resultado_actual;
-                        document.getElementById('valor-ntr-pantalla').innerText = numeroNTR + " %";
-                        document.getElementById('valor-ntr-pantalla').classList.remove('estado-carga');
-                    } else {
-                        document.getElementById('valor-ntr-pantalla').innerText = "Sin datos";
-                    }
-                } catch (error) {
-                    console.error("Error al conectar con Firebase:", error);
-                    document.getElementById('valor-ntr-pantalla').innerText = "Error de red";
-                }
+        document.getElementById("cerrar-sesion").addEventListener("click", async () => {
+            try {
+                await signOut(auth);
+                window.location.replace("./login.html");
+            } catch (error) {
+                console.error("Error al cerrar la sesión:", error);
+                loadingMessage.hidden = false;
+                loadingMessage.textContent = "No se pudo cerrar la sesión. Inténtalo de nuevo.";
             }
-        };
+        });
+
+        function iniciarPanel() {
+            if (dashboardStarted) {
+                return;
+            }
+            dashboardStarted = true;
+            escucharFacturacion(db, {
+                startRange: document.getElementById("periodo-desde"),
+                endRange: document.getElementById("periodo-hasta"),
+                startLabel: document.getElementById("periodo-desde-etiqueta"),
+                endLabel: document.getElementById("periodo-hasta-etiqueta"),
+                typeFilter: document.getElementById("filtro-tipo-facturacion"),
+                typeChart: document.getElementById("grafico-tipo"),
+                channelChart: document.getElementById("grafico-canal"),
+                tableBody: document.getElementById("filas-facturacion"),
+                total: document.getElementById("total-facturacion"),
+                costTotal: document.getElementById("costo-mes-actual"),
+                expenseTotal: document.getElementById("gasto-mes-actual"),
+                currentTotal: document.getElementById("total-mes-actual"),
+                currentMonth: document.getElementById("estado-mes-actual"),
+                status: document.getElementById("estado-facturacion")
+            });
+
+            window.cambiarVista = function(nombreVista) {
+                document.querySelectorAll('.vista').forEach(el => el.classList.remove('vista-activa'));
+                document.getElementById('vista-' + nombreVista).classList.add('vista-activa');
+            };
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (!usuarioAutorizado(user)) {
+                window.location.replace("./login.html");
+                return;
+            }
+
+            document.getElementById("usuario-sesion").textContent = user.email;
+            loadingMessage.hidden = true;
+            application.hidden = false;
+            iniciarPanel();
+        }, (error) => {
+            console.error("Error al comprobar la sesión de Firebase:", error);
+            loadingMessage.textContent = mensajeErrorAcceso(error);
+        });
     </script>
 </body>
 </html>

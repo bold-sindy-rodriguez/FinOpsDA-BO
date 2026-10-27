@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturación | FinOps Desk</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="facturacion.css">
+    <style>
+        :root {
+            --azul-bold: #121E6C;
+            --coral-vibrante: #EE424E;
+            --blanco: #FFFFFF;
+            --gris-claro: #F1F2F6;
+            --gris-texto: #4A4A4A;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 32px;
+            background: var(--gris-claro);
+            color: var(--azul-bold);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            max-width: 960px;
+            margin: 0 auto 32px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            background: var(--azul-bold);
+            color: var(--blanco);
+        }
+
+        .logo { width: auto; height: 35px; object-fit: contain; }
+
+        header h1 {
+            margin: 0;
+            padding-left: 20px;
+            border-left: 2px solid rgba(255, 255, 255, 0.3);
+            font-size: 1.35rem;
+        }
+
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 36px;
+            border-radius: 12px;
+            background: var(--blanco);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 { margin-top: 0; }
+        p { color: var(--gris-texto); line-height: 1.6; }
+
+        .caja-indicador {
+            display: inline-block;
+            min-width: 250px;
+            margin-top: 16px;
+            padding: 24px;
+            border-left: 5px solid var(--coral-vibrante);
+            border-radius: 8px;
+            background: var(--gris-claro);
+        }
+
+        .caja-indicador p { margin-top: 0; }
+
+        .resumen-facturacion { margin-top: 32px; }
+        .volver {
+            display: inline-block;
+            margin-top: 28px;
+            color: var(--azul-bold);
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 16px; }
+            header, main { padding: 24px; }
+            header { gap: 14px; }
+            header h1 { padding-left: 14px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="../../LOGO-BOLD-BLANCO.png" alt="Logo Bold" class="logo">
+        <h1>FinOps Desk | Facturación</h1>
+    </header>
+
+    <main>
+        <p id="comprobando-acceso" role="status">Verificando tu sesión...</p>
+
+        <div id="contenido-ntr-protegido" hidden>
+            <h2>Facturación mensual</h2>
+            <p>Costos y gastos consolidados de la base de datos.</p>
+
+            <section class="resumen-mensual" aria-label="Resumen de facturación del mes actual">
+                <article class="indicador-mensual">
+                    <h3>Costos del mes actual</h3>
+                    <p id="costo-mes-actual" class="valor-mensual">Cargando...</p>
+                </article>
+                <article class="indicador-mensual">
+                    <h3>Gastos del mes actual</h3>
+                    <p id="gasto-mes-actual" class="valor-mensual">Cargando...</p>
+                </article>
+                <article class="indicador-mensual">
+                    <h3>Total facturado del mes actual</h3>
+                    <p id="total-mes-actual" class="valor-mensual">Cargando...</p>
+                </article>
+            </section>
+            <p id="estado-mes-actual" class="nota-ntr" role="status">
+                El cálculo del NTR queda pendiente hasta incorporar ingresos y cantidad de transacciones.
+            </p>
+
+            <section class="resumen-facturacion" aria-labelledby="titulo-facturacion">
+                <h2 id="titulo-facturacion">Facturación consolidada</h2>
+                <p>Explora los valores mensuales por tipo y canal. Usa los controles para ajustar el periodo.</p>
+                <div class="controles-periodo" aria-label="Seleccionar periodo del informe">
+                    <label class="control-periodo" for="periodo-desde">
+                        Desde: <strong id="periodo-desde-etiqueta">-</strong>
+                        <input id="periodo-desde" type="range" min="0" max="0" value="0" aria-label="Mes inicial del periodo">
+                    </label>
+                    <label class="control-periodo" for="periodo-hasta">
+                        Hasta: <strong id="periodo-hasta-etiqueta">-</strong>
+                        <input id="periodo-hasta" type="range" min="0" max="0" value="0" aria-label="Mes final del periodo">
+                    </label>
+                </div>
+                <div class="filtros-facturacion">
+                    <label>Tipo
+                        <select id="filtro-tipo-facturacion">
+                            <option value="">Todos los tipos</option>
+                            <option value="Costo">Costo</option>
+                            <option value="Gasto">Gasto</option>
+                            <option value="Sin clasificar">Sin clasificar</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="graficos-facturacion">
+                    <section class="grafico-facturacion" aria-labelledby="titulo-grafico-tipo">
+                        <h3 id="titulo-grafico-tipo">Evolución mensual por tipo</h3>
+                        <div id="grafico-tipo" class="grafico-desplazable" aria-live="polite"></div>
+                    </section>
+                    <section class="grafico-facturacion" aria-labelledby="titulo-grafico-canal">
+                        <h3 id="titulo-grafico-canal">Evolución mensual por canal</h3>
+                        <div id="grafico-canal" class="grafico-desplazable" aria-live="polite"></div>
+                    </section>
+                </div>
+                <p class="total-facturacion">Total mostrado: <span id="total-facturacion">Cargando...</span></p>
+                <div class="tabla-facturacion-contenedor">
+                    <table class="tabla-facturacion">
+                        <thead><tr><th>Mes</th><th>Canal</th><th>Valor</th><th>Tipo</th></tr></thead>
+                        <tbody id="filas-facturacion">
+                            <tr><td colspan="4">Cargando información...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="estado-facturacion" class="estado-facturacion" role="status">Conectando con Firestore...</p>
+            </section>
+        </div>
+
+        <a class="volver" href="../../index.html">Volver al panel principal</a>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { escucharFacturacion } from "./facturacion.js";
+        import {
+            mensajeErrorAcceso,
+            onAuthStateChanged,
+            usuarioAutorizado
+        } from "./acceso.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBse--Da5Fdrso5bp9rFsUbq_uLcn61HS0",
+            authDomain: "black-hulling-462522-j2.firebaseapp.com",
+            projectId: "black-hulling-462522-j2",
+            storageBucket: "black-hulling-462522-j2.firebasestorage.app",
+            messagingSenderId: "625642864594",
+            appId: "1:625642864594:web:36faeadc111c1fd972d20b",
+            measurementId: "G-ZKXD0N4QCV"
+        };
+
+        const contenidoNtr = document.getElementById("contenido-ntr-protegido");
+        const loadingMessage = document.getElementById("comprobando-acceso");
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app, "ntr-boldcf");
+            const auth = getAuth(app);
+            onAuthStateChanged(auth, (user) => {
+                if (!usuarioAutorizado(user)) {
+                    window.location.replace("../../login.html");
+                    return;
+                }
+
+                loadingMessage.hidden = true;
+                contenidoNtr.hidden = false;
+                escucharFacturacion(db, {
+                    startRange: document.getElementById("periodo-desde"),
+                    endRange: document.getElementById("periodo-hasta"),
+                    startLabel: document.getElementById("periodo-desde-etiqueta"),
+                    endLabel: document.getElementById("periodo-hasta-etiqueta"),
+                    typeFilter: document.getElementById("filtro-tipo-facturacion"),
+                    typeChart: document.getElementById("grafico-tipo"),
+                    channelChart: document.getElementById("grafico-canal"),
+                    tableBody: document.getElementById("filas-facturacion"),
+                    total: document.getElementById("total-facturacion"),
+                    costTotal: document.getElementById("costo-mes-actual"),
+                    expenseTotal: document.getElementById("gasto-mes-actual"),
+                    currentTotal: document.getElementById("total-mes-actual"),
+                    currentMonth: document.getElementById("estado-mes-actual"),
+                    status: document.getElementById("estado-facturacion")
+                });
+            }, (error) => {
+                console.error("Error al comprobar la sesión:", error);
+                loadingMessage.textContent = mensajeErrorAcceso(error);
+            });
+        } catch (error) {
+            console.error("No fue posible inicializar Firebase:", error);
+            valorNtr.classList.remove("cargando");
+            valorNtr.textContent = "No disponible";
+            estadoConexion.textContent = "No fue posible iniciar la conexión con Firebase.";
+        }
+    </script>
+</body>
+</html>

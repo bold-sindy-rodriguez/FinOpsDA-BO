@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión | FinOps Desk</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --azul-bold: #121E6C;
+            --coral-vibrante: #EE424E;
+            --blanco: #FFFFFF;
+            --gris-claro: #F1F2F6;
+            --gris-texto: #4A4A4A;
+        }
+        * { box-sizing: border-box; }
+        body {
+            display: grid; min-height: 100vh; margin: 0; padding: 24px;
+            place-items: center; background: var(--gris-claro);
+            color: var(--azul-bold); font-family: Montserrat, sans-serif;
+        }
+        main {
+            width: min(100%, 460px); padding: 36px; border-radius: 12px;
+            background: var(--blanco); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        .logo {
+            display: block; width: auto; height: 52px; margin-bottom: 28px;
+            padding: 8px; border-radius: 6px; background: var(--azul-bold);
+        }
+        h1 { margin: 0 0 12px; font-size: 1.6rem; }
+        p { color: var(--gris-texto); line-height: 1.6; }
+        #estado-acceso { min-height: 48px; margin: 20px 0; }
+        button {
+            width: 100%; padding: 13px 16px; border: 0; border-radius: 6px;
+            background: var(--azul-bold); color: var(--blanco);
+            font: inherit; font-weight: 700; cursor: pointer;
+        }
+        button:hover { background: var(--coral-vibrante); }
+        button:disabled { cursor: wait; opacity: 0.7; }
+        #cerrar-sesion { margin-top: 12px; background: #4A4A4A; }
+    </style>
+</head>
+<body>
+    <main>
+        <img src="LOGO-BOLD-BLANCO.png" alt="Bold" class="logo">
+        <h1>FinOps Desk</h1>
+        <p>Inicia sesión con tu cuenta corporativa <strong>@bold.co</strong> para acceder al panel.</p>
+        <p id="estado-acceso" role="status" aria-live="polite">Verificando sesión...</p>
+        <button id="iniciar-sesion" type="button" hidden>Continuar con Google</button>
+        <button id="cerrar-sesion" type="button" hidden>Cerrar sesión y cambiar de cuenta</button>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import {
+            collection,
+            getDocs,
+            getFirestore,
+            limit,
+            query
+        } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import {
+            iniciarSesionGoogle,
+            mensajeErrorAcceso,
+            onAuthStateChanged,
+            signOut,
+            usuarioAutorizado
+        } from "./vistas/ntr/acceso.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBse--Da5Fdrso5bp9rFsUbq_uLcn61HS0",
+            authDomain: "black-hulling-462522-j2.firebaseapp.com",
+            projectId: "black-hulling-462522-j2",
+            storageBucket: "black-hulling-462522-j2.firebasestorage.app",
+            messagingSenderId: "625642864594",
+            appId: "1:625642864594:web:36faeadc111c1fd972d20b",
+            measurementId: "G-ZKXD0N4QCV"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app, "ntr-boldcf");
+        const status = document.getElementById("estado-acceso");
+        const loginButton = document.getElementById("iniciar-sesion");
+        const logoutButton = document.getElementById("cerrar-sesion");
+
+        loginButton.addEventListener("click", async () => {
+            loginButton.disabled = true;
+            status.textContent = "Abriendo el inicio de sesión de Google...";
+            try {
+                await iniciarSesionGoogle(auth);
+            } catch (error) {
+                console.error("Error al iniciar sesión con Google:", error);
+                status.textContent = mensajeErrorAcceso(error);
+            } finally {
+                loginButton.disabled = false;
+            }
+        });
+
+        logoutButton.addEventListener("click", async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Error al cerrar la sesión:", error);
+                status.textContent = "No se pudo cerrar la sesión. Inténtalo de nuevo.";
+            }
+        });
+
+        let checkedUid = null;
+        let checkingAccess = false;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!usuarioAutorizado(user)) {
+                checkedUid = null;
+                loginButton.hidden = false;
+                logoutButton.hidden = !user;
+                status.textContent = user
+                    ? `La cuenta ${user.email || "seleccionada"} no está autorizada. Inicia sesión con una cuenta verificada @bold.co.`
+                    : "No hay una sesión activa. Selecciona tu cuenta corporativa de Google.";
+                return;
+            }
+
+            logoutButton.hidden = false;
+            if (checkedUid === user.uid || checkingAccess) {
+                return;
+            }
+
+            checkingAccess = true;
+            loginButton.hidden = true;
+            status.textContent = `Cuenta ${user.email} verificada. Comprobando acceso a Firestore...`;
+            try {
+                await getDocs(query(collection(db, "facturacion_consolidada"), limit(1)));
+                if (auth.currentUser?.uid !== user.uid) {
+                    return;
+                }
+                checkedUid = user.uid;
+                status.textContent = "Autenticación y permisos de Firestore verificados. Abriendo el panel...";
+                window.location.replace("./index.html");
+            } catch (error) {
+                console.error("Error al verificar permisos de lectura de Firestore:", error);
+                loginButton.hidden = false;
+                status.textContent = error.code === "permission-denied"
+                    ? "Google verificó tu cuenta, pero Firestore denegó la lectura. Publica las reglas en la base ntr-boldcf y verifica que la cuenta pertenezca a @bold.co."
+                    : "La cuenta está autenticada, pero no se pudo comprobar Firestore. Verifica la conexión e inténtalo de nuevo.";
+            } finally {
+                checkingAccess = false;
+            }
+        }, (error) => {
+            console.error("Error al comprobar la sesión:", error);
+            status.textContent = "No se pudo verificar la sesión con Firebase. Recarga la página e inténtalo de nuevo.";
+        });
+    </script>
+</body>
+</html>
