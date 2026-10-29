@@ -80,11 +80,11 @@
         .tarjeta-contenido p { color: var(--gris-texto); line-height: 1.6; }
 
         /* VISTAS */
-        .vista { display: none; /* Oculta todas las vistas por defecto */ }
+        .vista { display: none; }
         .vista-activa { display: block; }
         .vista-iframe { width: 100%; height: calc(100vh - 130px); min-height: 600px; border: none; border-radius: 12px; }
 
-        /* DISEÑO ESPECIAL PARA EL DATO NTR */
+        /* DISEÑO ESPECIAL PARA EL DATO NTR Y TABLAS */
         .caja-indicador {
             background-color: var(--gris-claro); border-left: 5px solid var(--coral-vibrante);
             padding: 30px; border-radius: 8px; margin-top: 20px; display: inline-block;
@@ -92,12 +92,39 @@
         .valor-ntr { font-size: 4rem; font-weight: 800; color: var(--azul-bold); }
         .estado-carga { color: var(--coral-vibrante); font-style: italic; }
         .resumen-facturacion { margin-top: 28px; }
+        
+        /* Ajuste visual para la caja de filtros movida arriba */
+        .caja-filtros-superior {
+            background-color: var(--gris-claro);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid var(--borde);
+        }
+
         .filtros-facturacion { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
         .filtros-facturacion label { display: grid; gap: 6px; color: var(--gris-texto); font-size: 0.9rem; }
         .filtros-facturacion select {
             min-width: 170px; padding: 9px 12px; border: 1px solid var(--borde);
             border-radius: 6px; background: var(--blanco); color: var(--azul-bold); font: inherit;
         }
+
+        .tabla-facturacion {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .tabla-facturacion th, .tabla-facturacion td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--borde);
+        }
+        .tabla-facturacion th {
+            background-color: var(--gris-claro);
+            color: var(--azul-bold);
+            font-weight: 700;
+        }
+
         #contenido-app:not([hidden]) { display: flex; flex-direction: column; min-height: 100vh; }
         #comprobando-acceso { margin: auto; padding: 24px; color: var(--azul-bold); }
         .boton-sesion {
@@ -106,7 +133,6 @@
         }
         .boton-sesion:hover { background: var(--coral-vibrante); }
         .usuario-sesion { margin-left: auto; padding-right: 16px; color: var(--blanco); font-size: 0.9rem; }
-
     </style>
 </head>
 <body>
@@ -140,28 +166,11 @@
             <iframe id="vista-automatizaciones" class="vista vista-iframe" src="https://aldemarjerez-crypto.github.io/Finops-Tooldeck/index.html"></iframe>
 
             <div id="vista-ntr" class="tarjeta-contenido vista">
-                <h2>Facturación mensual</h2>
-                <p>Costos y gastos consolidados de la base de datos.</p>
-                <section class="resumen-mensual" aria-label="Resumen de facturación del mes actual">
-                    <article class="indicador-mensual">
-                        <h3>Costos del mes actual</h3>
-                        <p id="costo-mes-actual" class="valor-mensual">Cargando...</p>
-                    </article>
-                    <article class="indicador-mensual">
-                        <h3>Gastos del mes actual</h3>
-                        <p id="gasto-mes-actual" class="valor-mensual">Cargando...</p>
-                    </article>
-                    <article class="indicador-mensual">
-                        <h3>Total facturado del mes actual</h3>
-                        <p id="total-mes-actual" class="valor-mensual">Cargando...</p>
-                    </article>
-                </section>
-                <p id="estado-mes-actual" class="nota-ntr" role="status">
-                    El cálculo del NTR queda pendiente hasta incorporar ingresos y cantidad de transacciones.
-                </p>
-                <section class="resumen-facturacion" aria-labelledby="titulo-facturacion">
-                    <h3 id="titulo-facturacion">Facturación consolidada</h3>
-                    <p>Explora los valores mensuales por tipo y canal. Usa los controles para ajustar el periodo.</p>
+                
+                <!-- 1. FILTROS EN LA PARTE SUPERIOR -->
+                <div class="caja-filtros-superior">
+                    <h3 id="titulo-facturacion" style="margin-bottom: 10px;">Filtros de Búsqueda</h3>
+                    <p style="font-size: 0.9rem; margin-bottom: 15px;">Ajusta el periodo y tipo para actualizar las tablas y gráficos.</p>
                     <div class="controles-periodo" aria-label="Seleccionar periodo del informe">
                         <label class="control-periodo" for="periodo-desde">
                             Desde: <strong id="periodo-desde-etiqueta">-</strong>
@@ -182,6 +191,51 @@
                             </select>
                         </label>
                     </div>
+                </div>
+
+                <!-- 2. NUEVA TABLA RESUMEN POR CANAL (Conectada a los filtros) -->
+                <section class="resumen-por-canal" style="margin-bottom: 40px;">
+                    <h3 style="color: var(--azul-bold); border-bottom: 2px solid var(--coral-vibrante); padding-bottom: 8px; margin-bottom: 15px;">Resumen Operativo por Canal</h3>
+                    <div class="tabla-facturacion-contenedor">
+                        <table class="tabla-facturacion">
+                            <thead>
+                                <tr>
+                                    <th>Canal</th>
+                                    <th>Total Transacciones</th>
+                                    <th>Monto Total (COP)</th>
+                                    <th>Pricing Total (COP)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-resumen-canales-body">
+                                <tr><td colspan="4">Cargando datos resumidos desde Firebase...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 3. FACTURACIÓN MENSUAL (Tarjetas originales) -->
+                <h2>Facturación mensual</h2>
+                <p>Costos y gastos consolidados de la base de datos.</p>
+                <section class="resumen-mensual" aria-label="Resumen de facturación del mes actual">
+                    <article class="indicador-mensual">
+                        <h3>Costos del mes actual</h3>
+                        <p id="costo-mes-actual" class="valor-mensual">Cargando...</p>
+                    </article>
+                    <article class="indicador-mensual">
+                        <h3>Gastos del mes actual</h3>
+                        <p id="gasto-mes-actual" class="valor-mensual">Cargando...</p>
+                    </article>
+                    <article class="indicador-mensual">
+                        <h3>Total facturado del mes actual</h3>
+                        <p id="total-mes-actual" class="valor-mensual">Cargando...</p>
+                    </article>
+                </section>
+                <p id="estado-mes-actual" class="nota-ntr" role="status">
+                    El cálculo del NTR queda pendiente hasta incorporar ingresos y cantidad de transacciones.
+                </p>
+                
+                <!-- 4. GRÁFICOS Y TABLA DETALLADA ORIGINAL -->
+                <section class="resumen-facturacion">
                     <div class="graficos-facturacion">
                         <section class="grafico-facturacion" aria-labelledby="titulo-grafico-tipo">
                             <h3 id="titulo-grafico-tipo">Evolución mensual por tipo</h3>
@@ -215,7 +269,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        // Agregamos getDocs y collection para la nueva función de resumen
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
         import { escucharFacturacion } from "./vistas/ntr/facturacion.js";
         import { mensajeErrorAcceso, onAuthStateChanged, signOut, usuarioAutorizado } from "./vistas/ntr/acceso.js";
@@ -248,11 +303,77 @@
             }
         });
 
-        function iniciarPanel() {
-            if (dashboardStarted) {
-                return;
+        // NUEVA FUNCIÓN: Extrae, filtra y resume los datos por canal
+        async function cargarResumenCanales() {
+            const tbody = document.getElementById("tabla-resumen-canales-body");
+            const filtroTipo = document.getElementById("filtro-tipo-facturacion").value;
+            
+            try {
+                // Obtenemos los datos de la colección resumen_mensual
+                const querySnapshot = await getDocs(collection(db, "resumen_mensual"));
+                let datos = [];
+                querySnapshot.forEach(doc => datos.push(doc.data()));
+
+                // Aplicamos el filtro si el usuario seleccionó uno
+                if (filtroTipo) {
+                    datos = datos.filter(fila => 
+                        fila.Tipo === filtroTipo || 
+                        fila.Tipo_Registro === filtroTipo || 
+                        fila.Naturaleza === filtroTipo
+                    );
+                }
+
+                // Agrupamos la información
+                const totales = datos.reduce((acc, fila) => {
+                    const canal = fila.Canal_Limpio || fila.canal_limpio || fila.Canal || "Desconocido";
+                    
+                    if(!acc[canal]) {
+                        acc[canal] = { transacciones: 0, monto: 0, pricing: 0 };
+                    }
+                    
+                    acc[canal].transacciones += Number(fila['Cantidad transacciones']) || 0;
+                    acc[canal].monto += Number(fila['Monto']) || 0;
+                    acc[canal].pricing += Number(fila['Pricing']) || 0;
+                    
+                    return acc;
+                }, {});
+
+                // Limpiamos la tabla y pintamos los resultados
+                tbody.innerHTML = "";
+                
+                const llaves = Object.keys(totales);
+                if(llaves.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No hay datos para el filtro seleccionado.</td></tr>`;
+                    return;
+                }
+
+                llaves.forEach(canal => {
+                    const vals = totales[canal];
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${canal}</strong></td>
+                            <td>${vals.transacciones.toLocaleString('es-CO')}</td>
+                            <td>$ ${vals.monto.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td>$ ${vals.pricing.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error cargando resumen de canales:", error);
+                tbody.innerHTML = `<tr><td colspan="4" style="color: red;">Error al cargar los datos: ${error.message}</td></tr>`;
             }
+        }
+
+        // Conectamos los filtros para que actualicen la nueva tabla de resumen al cambiar
+        document.getElementById("filtro-tipo-facturacion").addEventListener("change", cargarResumenCanales);
+        document.getElementById("periodo-desde").addEventListener("change", cargarResumenCanales);
+        document.getElementById("periodo-hasta").addEventListener("change", cargarResumenCanales);
+
+        function iniciarPanel() {
+            if (dashboardStarted) { return; }
             dashboardStarted = true;
+            
+            // Inicia la lógica de facturación original (Gráficas y tarjetas)
             escucharFacturacion(db, {
                 startRange: document.getElementById("periodo-desde"),
                 endRange: document.getElementById("periodo-hasta"),
@@ -270,6 +391,9 @@
                 status: document.getElementById("estado-facturacion")
             });
 
+            // Llamamos a nuestra nueva función para que cargue la tabla resumen al inicio
+            cargarResumenCanales();
+
             window.cambiarVista = function(nombreVista) {
                 document.querySelectorAll('.vista').forEach(el => el.classList.remove('vista-activa'));
                 document.getElementById('vista-' + nombreVista).classList.add('vista-activa');
@@ -281,7 +405,6 @@
                 window.location.replace("./login.html");
                 return;
             }
-
             document.getElementById("usuario-sesion").textContent = user.email;
             loadingMessage.hidden = true;
             application.hidden = false;
